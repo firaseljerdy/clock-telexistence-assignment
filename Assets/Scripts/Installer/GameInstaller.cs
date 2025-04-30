@@ -9,6 +9,7 @@ namespace ClockApp.Installers
         {
             // Services
             Container.BindInterfacesAndSelfTo<ClockService>().AsSingle();
+            Container.BindInterfacesAndSelfTo<TimerService>().AsSingle();
 
         }
     }
