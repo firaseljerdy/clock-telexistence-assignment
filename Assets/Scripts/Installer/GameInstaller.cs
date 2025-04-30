@@ -1,0 +1,15 @@
+using Zenject;
+using ClockApp.Services;
+
+namespace ClockApp.Installers
+{
+    public class GameInstaller : MonoInstaller
+    {
+        public override void InstallBindings()
+        {
+            // Services
+            Container.BindInterfacesAndSelfTo<ClockService>().AsSingle();
+
+        }
+    }
+}
