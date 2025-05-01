@@ -18,6 +18,7 @@ namespace ClockApp.Installers
             Container.BindInterfacesAndSelfTo<StopwatchService>().AsSingle();
             Container.Bind<TabStyleSettings>().FromInstance(_tabStyleSettings).AsSingle();
             Container.Bind<TabController>().FromComponentInHierarchy().AsSingle();
+            Container.BindInterfacesAndSelfTo<AudioService>().AsSingle().NonLazy();
         }
     }
 }

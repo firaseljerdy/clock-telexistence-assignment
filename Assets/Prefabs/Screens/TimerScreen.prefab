@@ -1089,7 +1089,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _display: {fileID: 2843002812194721367}
-  _ring: {fileID: 0}
+  _timerRingClip: {fileID: 8300000, guid: 4ebde10e90b754f46b0f11b3373d4a54, type: 3}
   _startBtn: {fileID: 2843002812691362055}
   _pauseBtn: {fileID: 2843002813263963028}
   _resetBtn: {fileID: 2843002812490276043}

@@ -14,9 +14,10 @@ namespace ClockApp.Controllers
     public class TimerController : MonoBehaviour
     {
         [Inject] private ITimerService _timerService;
+        [Inject] private IAudioService _audioService;
 
         [Header("Display")][SerializeField] private TMP_Text _display;
-        [SerializeField] private AudioSource _ring;
+        [SerializeField] private AudioClip _timerRingClip;
 
         [Header("Buttons")][SerializeField] private Button _startBtn;
         [SerializeField] private Button _pauseBtn;
@@ -35,6 +36,8 @@ namespace ClockApp.Controllers
              // Dependndecy Checks
              if (_timerService == null) Debug.LogError(" TimerService NOT Injected!", this);
              else Debug.Log(" TimerService Injected successfully.", this);
+             if (_audioService == null) Debug.LogError(" AudioService NOT Injected!", this);
+             else Debug.Log(" AudioService Injected successfully.", this);
 
              if (_display == null) Debug.LogError(" _display NOT assigned in prefab!", this);
              if (_startBtn == null) Debug.LogError(" _startBtn NOT assigned in prefab!", this);
@@ -42,7 +45,7 @@ namespace ClockApp.Controllers
              if (_resetBtn == null) Debug.LogError(" _resetBtn NOT assigned in prefab!", this);
              if (_minutesInput == null) Debug.LogError(" _minutesInput NOT assigned in prefab!", this);
              if (_secondsInput == null) Debug.LogError(" _secondsInput NOT assigned in prefab!", this);
-             if (_ring == null) Debug.LogWarning(" _ring (AudioSource) not assigned in prefab.", this);
+             if (_timerRingClip == null) Debug.LogWarning(" _timerRingClip (AudioClip) not assigned in prefab.", this);
 
             //Input Field Setup & Validation
             InitializeInputFields(_currentSetDuration);
@@ -154,14 +157,14 @@ namespace ClockApp.Controllers
 
         private void PlayRingSound()
         {
-            if (_ring != null && !_ring.isPlaying)
+             if (_audioService != null && _timerRingClip != null)
             {
-                _ring.Play();
+                _audioService.PlaySound(_timerRingClip);
             }
-            else if (_ring == null)
+            else
             {
-                 // Already logged in Start, but can add warning here too if needed
-                 // Debug.LogWarning("TimerController: PlayRingSound called but _ring AudioSource not assigned.", this);
+                if (_audioService == null) Debug.LogError("PlayRingSound: AudioService is null!", this);
+                if (_timerRingClip == null) Debug.LogWarning("PlayRingSound: Timer ring AudioClip not assigned.", this);
             }
         }
 
