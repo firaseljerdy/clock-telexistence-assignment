@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UniRx;
 using UnityEngine;
 
@@ -17,15 +18,19 @@ namespace ClockApp.Services
 
         private IDisposable _timerSubscription;
         private float _lastTickTime;
+        private static int _activeInstanceCount = 0;
 
         public IReadOnlyReactiveProperty<TimeSpan> ElapsedTime => _elapsedTime;
         public IReadOnlyReactiveProperty<IReadOnlyList<TimeSpan>> Laps => _laps;
         public IReadOnlyReactiveProperty<bool> IsRunning => _isRunning;
+        public static int ActiveInstanceCount => _activeInstanceCount;
 
         public void StartStopwatch()
         {
             if (_isRunning.Value) return;
+            if (Interlocked.CompareExchange(ref _activeInstanceCount, 0, 0) > 0) return; // Prevent multiple instances from running
             _isRunning.Value = true;
+            Interlocked.Increment(ref _activeInstanceCount);
             StartInterval();
         }
 
@@ -54,6 +59,8 @@ namespace ClockApp.Services
         {
             if (!_isRunning.Value) return;
             _isRunning.Value = false;
+            Interlocked.Decrement(ref _activeInstanceCount);
+
         }
 
         public void ResetStopwatch()
@@ -75,6 +82,7 @@ namespace ClockApp.Services
 
         public void Dispose()
         {
+            StopStopwatch();
             _timerSubscription?.Dispose();
             _elapsedTime.Dispose();
             _laps.Dispose();

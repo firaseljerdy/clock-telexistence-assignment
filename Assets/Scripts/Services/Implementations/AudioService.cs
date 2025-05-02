@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Zenject;
 using System;
 
@@ -17,7 +17,8 @@ namespace ClockApp.Services
         {
             // Create a dedicated GameObject to hold the AudioSource
             _audioPlayerObject = new GameObject("AudioPlayer_Service");
-            UnityEngine.Object.DontDestroyOnLoad(_audioPlayerObject);
+            if (Application.isPlaying)
+                UnityEngine.Object.DontDestroyOnLoad(_audioPlayerObject);
             _audioSource = _audioPlayerObject.AddComponent<AudioSource>();
 
             _audioSource.playOnAwake = false;
@@ -47,9 +48,16 @@ namespace ClockApp.Services
         {
             if (_audioPlayerObject != null)
             {
-                UnityEngine.Object.Destroy(_audioPlayerObject);
-                //Debug.Log("AudioService Disposed and AudioPlayer GameObject destroyed.");
+                // Use the correct destroy call for edit‐mode vs play‐mode
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(_audioPlayerObject);
+                else
+                    UnityEngine.Object.DestroyImmediate(_audioPlayerObject);
+
+                // clear the field so reflection sees it as null
+                _audioPlayerObject = null;
             }
+
             _audioSource = null;
         }
     }
