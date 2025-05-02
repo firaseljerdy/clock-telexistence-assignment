@@ -9,6 +9,9 @@ namespace ClockApp.Installers
     {
         [Header("UI Settings")]
         [SerializeField] private TabStyleSettings _tabStyleSettings;
+        
+        [Header("Notification Settings")]
+        [SerializeField] private AudioClip _timerCompletionSound;
 
         public override void InstallBindings()
         {
@@ -19,6 +22,18 @@ namespace ClockApp.Installers
             Container.Bind<TabStyleSettings>().FromInstance(_tabStyleSettings).AsSingle();
             Container.Bind<TabController>().FromComponentInHierarchy().AsSingle();
             Container.BindInterfacesAndSelfTo<AudioService>().AsSingle().NonLazy();
+            
+            Container.Bind<AudioClip>().WithId("TimerCompletionSound")
+                .FromInstance(_timerCompletionSound).AsSingle();
+            
+            // always active
+            Container.BindInterfacesAndSelfTo<NotificationManager>().FromNewComponentOnNewGameObject()
+                .WithGameObjectName("Global_NotificationManager")
+                .AsSingle()
+                .NonLazy();
+                
+            // persists between scenes
+            Container.BindExecutionOrder<NotificationManager>(-10000);
         }
     }
 }
