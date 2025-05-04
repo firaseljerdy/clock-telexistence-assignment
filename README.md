@@ -2,6 +2,27 @@
 
 Please find the Windows build under "windows-builder" folder in root folder.
 
+### Estimation
+Here is roughly how much it took me time to complete each feature:
+
+- Read Requirements and take notes: ~30 minutes
+- Initialize Unity project and setup git: ~30 minutes
+- Installing dependencies: ~30 minutes
+- Planning and diagramming: ~30 minutes
+- Implementing clock feature with basic UI: ~1 hour
+- Implementing timer feature with basic UI: ~1 hour
+- Implementing Notification Manager for audio: ~1 hour
+- Implementing stopwatch feature with basic UI: ~1 hour
+- Implementing navbar feature with tab styling: ~1.5 hours
+- Implementing persistent clock feature: ~20 minutes
+- Writing EditMode tests: ~1.5 hour
+- Writing PlayMode tests: ~2 hours
+- Rehauling UI: ~40 minutes
+- Writing documentation: ~1 hour
+- Answering questions: ~30 minutes
+- Building project: ~10 minutes
+- Testing on Iphone using Unity Remote 5: ~15 minutes
+
 ## Answers
 
 ### As we said, this application will be used on iOS/iPad devices. Do you have any concern for UI?
