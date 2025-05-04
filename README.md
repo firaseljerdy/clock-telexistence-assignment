@@ -1,4 +1,32 @@
-# Clock Application - Technical Documentation
+# Clock Application - Technical Documentation & Answers
+
+## Answers
+
+### As we said, this application will be used on iOS/iPad devices. Do you have any concern for UI?
+
+Honestly, I have just one real worry: we need the app to run in portrait on iPads and iPhones, but right now it’s locked to landscape. The good news is that every panel and button already uses Unity’s anchor presets and layout groups, so as soon as we flip the Canvas to portrait it’ll rearrange itself correctly. So all we have to do is play around with the text scale responsiveness.
+
+### How would you refactor the code and/or project after release? What would you prioritize as “must happen” versus “nice to have” changes
+
+#### Must-Have Changes
+
+Add a “World Clock” view where users pick cities from a searchable list; show each zone’s current time side-by-side.
+
+Build a flexible alarm manager with repeat patterns and custom chimes that hooks into iOS notifications—basically matching iOS Clock’s feature set.
+
+#### Nice-to-Have Enhancements
+
+Swap color palettes or skins so the app is customizable.
+
+Add dark/light mode.
+
+Bounce buttons, fade timers, haptic taps—little flourishes to make interactions feel snappy.
+
+Give users a picker to choose built-in ringtones or import their own.
+
+### This application will be used on VR application. Share your concern and your opinion on what need to take into account to support it in VR?
+
+For VR, we put the clock UI on a World-Space Canvas so it shows up in the 3D world. We place it at a comfortable distance (about 3 meters) and keep it within a small angle in front of the user so they don’t have to strain their neck. To keep the app running smoothly, we split fixed parts (like the clock face) and moving parts (like buttons) into separate canvases.
 
 ## Architecture Overview
 
