@@ -1,5 +1,7 @@
 # Clock Application - Technical Documentation & Answers
 
+Please find the Windows build under "windows-builder" folder in root folder.
+
 ## Answers
 
 ### As we said, this application will be used on iOS/iPad devices. Do you have any concern for UI?
