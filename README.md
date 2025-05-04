@@ -1,139 +1,282 @@
-# Clock Application - Unity Project
+# Clock Application - Technical Documentation
 
-## Project Overview
+## Architecture Overview
 
-This project will develop a multi-functional clock application in Unity that includes three main features:
+The clock application follows a clean architecture pattern with clear separation of concerns, leveraging reactive programming and dependency injection throughout. This document outlines the technical implementation details, script relationships, and architectural patterns to help developers understand and contribute to the codebase.
 
-- Standard Clock with time zone support
-- Countdown Timer with notification support
-- Stopwatch with lap recording functionality
+## Architectural Diagram
 
-The application will be designed with a clean architecture that allows for future integration with work operation applications.
+![diagram image](diagram.jpeg)
 
-## Technical Requirements
+## Testing Strategy
 
-- Unity LTS Release 2021.3.4f1
-- Reactive programming using UniRx
-- Dependency Injection pattern implementation
-- Comprehensive testing strategy
-- Cross-platform UI design (targeting Windows initially, with iOS/iPad compatibility in mind)
+The application's architecture is designed to be highly testable, with all dependencies explicitly defined and injectable. Usually Edit mode tests are for testing logic and methods, restricted for the service scripts.
 
-## Architecture Design
+### Edit Mode Tests
 
-### Core Architecture
+Edit mode tests focus on testing individual components in isolation:
 
-We will implement a clean architecture approach with clear separation of concerns:
+```csharp
+[TestFixture]
+public class TimerServiceTests
+{
+    private ITimeSystem _mockTimeSystem;
+    private IAudioSystem _mockAudioSystem;
+    private IPersistenceSystem _mockPersistenceSystem;
+    private TimerService _timerService;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _mockTimeSystem = Substitute.For<ITimeSystem>();
+        _mockAudioSystem = Substitute.For<IAudioSystem>();
+        _mockPersistenceSystem = Substitute.For<IPersistenceSystem>();
+
+        _timerService = new TimerService(
+            _mockTimeSystem,
+            _mockAudioSystem,
+            _mockPersistenceSystem);
+    }
+
+    [Test]
+    public void Start_SetsIsRunningToTrue()
+    {
+        // Arrange
+        bool isRunningValue = false;
+        _timerService.IsRunning.Subscribe(value => isRunningValue = value);
+
+        // Act
+        _timerService.Start();
+
+        // Assert
+        Assert.IsTrue(isRunningValue);
+    }
+
+    // More tests...
+}
+```
+
+### Play Mode Tests
+
+Play mode tests focus on integration testing and UI interactions. it is more end to end testing and they are a bit harder to setup, as they require setting up the context and the UI elements and then mimicking user presses and actions.
+
+```csharp
+public class TimerViewTests : IPrebuildSetup
+{
+    private TimerView _timerView;
+    private Button _startButton;
+    private Button _resetButton;
+    private Text _timeText;
+
+    public void Setup()
+    {
+        // Load test scene
+        SceneManager.LoadScene("TestScene");
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _timerView = GameObject.FindObjectOfType<TimerView>();
+        _startButton = _timerView.transform.Find("StartButton").GetComponent<Button>();
+        _resetButton = _timerView.transform.Find("ResetButton").GetComponent<Button>();
+        _timeText = _timerView.transform.Find("TimeText").GetComponent<Text>();
+    }
+
+    [UnityTest]
+    public IEnumerator ClickingStartButton_StartsTimer()
+    {
+        // Arrange
+        string initialText = _timeText.text;
+
+        // Act
+        _startButton.onClick.Invoke();
+        yield return new WaitForSeconds(1.1f);
+
+        // Assert
+        Assert.AreNotEqual(initialText, _timeText.text);
+    }
+
+    // More tests...
+}
+```
+
+## Project Folder Structure and Scripts Organization
+
+The application's codebase is organized into a clear folder structure that reflects the architectural layers:
+
+### Assets/Scripts/ Structure
 
 ```
-├── Presentation Layer (UI/Views)
-├── Application Layer (Controllers/Presenters)
-├── Domain Layer (Business Logic/Services)
-└── Infrastructure Layer (External Services/Data Access)
+Assets/Scripts/
+├── Controllers/            # Application layer controllers
+├── Data/                   # Data models and DTOs
+├── Installer/              # Dependency injection setup
+├── Services/               # Domain layer services
+│   ├── Interfaces/         # Service contracts
+│   └── Implementations/    # Concrete service implementations
+├── Settings/               # Configuration and settings classes
+├── Tests/                  # Unit and integration tests
+└── UI/                     # UI components and view scripts
+```
+
+This organization makes it easy to navigate the codebase and understand the responsibilities of each component.
+
+## Key Components Deep Dive
+
+### Dependency Injection with Zenject
+
+The project uses Zenject (a Unity-specific implementation of Extenject) for dependency injection. The main installer is defined in `GameInstaller.cs`:
+
+```csharp
+public class GameInstaller : MonoInstaller
+{
+    [Header("UI Settings")]
+    [SerializeField] private TabStyleSettings _tabStyleSettings;
+
+    [Header("Notification Settings")]
+    [SerializeField] private AudioClip _timerCompletionSound;
+
+    public override void InstallBindings()
+    {
+        // Services
+        Container.BindInterfacesAndSelfTo<ClockService>().AsSingle();
+        Container.BindInterfacesAndSelfTo<TimerService>().AsSingle();
+        Container.BindInterfacesAndSelfTo<StopwatchService>().AsSingle();
+        Container.Bind<TabStyleSettings>().FromInstance(_tabStyleSettings).AsSingle();
+        Container.Bind<TabController>().FromComponentInHierarchy().AsSingle();
+        Container.BindInterfacesAndSelfTo<AudioService>().AsSingle().NonLazy();
+
+        Container.Bind<AudioClip>().WithId("TimerCompletionSound")
+            .FromInstance(_timerCompletionSound).AsSingle();
+
+        // Always active components
+        Container.BindInterfacesAndSelfTo<NotificationManager>().FromNewComponentOnNewGameObject()
+            .WithGameObjectName("Global_NotificationManager")
+            .AsSingle()
+            .NonLazy();
+
+        // Execution order configuration
+        Container.BindExecutionOrder<NotificationManager>(-10000);
+    }
+}
+```
+
+The installer binds all services and controllers to the dependency injection container, ensuring proper instantiation and lifecycle management.
+
+### Navigation with TabController
+
+The `TabController` implements a tab-based navigation pattern that allows switching between different features of the application:
+
+```csharp
+public class TabController : MonoBehaviour
+{
+    // Injected dependencies
+    [Inject] private TabStyleSettings _styleSettings;
+    [Inject] private DiContainer _container;
+
+    // Tab configuration
+    [SerializeField] private GameObject _tabElementPrefab;
+    [SerializeField] private Transform _tabContainer;
+    [SerializeField] private Transform _screenContainer;
+    [SerializeField] private List<ScreenPrefabMapping> _screenMappings;
+
+    // Reactive state
+    private readonly ReactiveProperty<TabMode> _currentMode = new ReactiveProperty<TabMode>(TabMode.Clock);
+    public IReadOnlyReactiveProperty<TabMode> CurrentMode => _currentMode;
+
+    private GameObject _currentScreenInstance;
+
+    // Implementation details...
+}
+```
+
+### Controllers Layer
+
+Controllers act as intermediaries between the UI and services:
+
+1. **ClockController**: Manages the clock display and time zone selection UI.
+2. **TimerController**: Handles timer UI interactions, including start/stop/reset functionality and timer presets.
+3. **StopwatchController**: Controls the stopwatch UI, including lap time recording and display.
+
+### Service Layer Implementation
+
+The service layer contains the core business logic of the application:
+
+1. **ClockService**: Fetches time data from network APIs (worldtimeapi.org) with fallback to system time.
+2. **TimerService**: Implements countdown timer functionality with multiple timer support.
+3. **StopwatchService**: Handles time tracking and lap recording.
+4. **AudioService**: Manages sound effects and notifications.
+5. **NotificationManager**: Handles system notifications when timers complete.
+
+### UI Components
+
+The UI layer consists of reusable components:
+
+1. **TabElement**: Represents a clickable tab in the navigation bar.
+2. **PersistentClockDisplay**: Shows the current time even when using other features.
+
+### Data Models
+
+The application uses lightweight data classes to represent domain objects:
+
+```csharp
+// ClockData.cs example
+public class ClockData
+{
+    public DateTime CurrentTime { get; }
+    public string TimeZoneId { get; }
+    public string UtcOffset { get; }
+    public bool IsServerTime { get; }
+
+    public ClockData(DateTime currentTime, string timeZoneId, string utcOffset, bool isServerTime)
+    {
+        CurrentTime = currentTime;
+        TimeZoneId = timeZoneId;
+        UtcOffset = utcOffset;
+        IsServerTime = isServerTime;
+    }
+
+    public static ClockData CreateSystemTimeData()
+    {
+        return new ClockData(
+            DateTime.Now,
+            TimeZoneInfo.Local.Id,
+            TimeZoneInfo.Local.BaseUtcOffset.ToString(),
+            false
+        );
+    }
+}
 ```
 
 ### Dependency Injection
 
-All dependencies will be registered and resolved through a DI container (using VContainer or Zenject), allowing for:
+Zenject provides a comprehensive DI framework that:
 
-- Loose coupling between components
-- Easier testing through mock implementations
-- Runtime flexibility and configuration
+- Decouples component creation from usage
+- Manages object lifecycles (singleton, transient)
+- Supports constructor injection and field injection
+- Enables easier testing through dependency mocking
 
-### Reactive Programming
+### Scene Setup
 
-The application will leverage UniRx (Reactive Extensions for Unity) to:
+Most technologies have the same approach to creating scalable and repsonsive UI'. It all comes down to properly creating containers and layout groups. understanding these concepts can help you build reponsive UI.
 
-- Handle asynchronous events
-- Manage state changes
-- Create responsive UI updates
-- Connect data streams between layers
+Here is the scene setup:
 
-## Feature Breakdown
-
-### Clock Feature
-
-- **Time Service**: Core service for accessing system time
-- **TimeZone Management**: Support for displaying different time zones
-- **Clock View**: Analog and digital display options
-- **Interfaces**: `ITimeService`, `IClockPresenter`, `IClockView`
-
-### Timer Feature
-
-- **Timer Service**: Countdown timer functionality
-- **Notification System**: Audio and visual alerts when timer completes
-- **Timer Controls**: Start, pause, resume, reset
-- **Timer View**: Display with intuitive controls
-- **Interfaces**: `ITimerService`, `ITimerPresenter`, `ITimerView`, `INotificationService`
-
-### Stopwatch Feature
-
-- **Stopwatch Service**: Precise time tracking
-- **Lap Recording**: Track and display multiple lap times
-- **Stopwatch Controls**: Start, pause, resume, reset, record lap
-- **Stopwatch View**: Display for elapsed time and lap records
-- **Interfaces**: `IStopwatchService`, `IStopwatchPresenter`, `IStopwatchView`
-
-## Navigation System
-
-- Tab-based navigation between features
-- Persistent clock display while using other features
-- Responsive layout for different screen orientations and sizes
-
-## Integration Interface
-
-- Create a clean API for external applications to interact with clock features
-- Define integration points for work operation applications
-- Document interface methods and expected behaviors
-
-## Implementation Phases
-
-### Phase 1: Project Setup & Architecture
-
-- Create Unity project with proper configurations
-- Set up version control
-- Install required packages
-- Implement core architecture and DI framework
-- Create folder structure
-
-### Phase 2: Core Feature Implementation
-
-- Implement Time Service and related interfaces
-- Build basic UI for each feature
-- Implement core functionality for Clock, Timer, and Stopwatch
-- Create tests for core services
-
-### Phase 3: Feature Integration & Navigation
-
-- Implement navigation system between features
-- Ensure features can coexist and operate simultaneously
-- Refine UI for responsiveness
-- Test integrated features
-
-### Phase 4: Integration Interface & Future Compatibility
-
-- Design and implement integration interfaces
-- Create mock demonstrations of integration capabilities
-- Document API for future developers
-
-### Phase 5: Quality Assurance
-
-- Comprehensive testing across all features
-- Performance optimization
-- UI/UX evaluation and refinement
-
-### Phase 6: Documentation & Build
-
-- Complete project documentation
-- Generate Windows build
-- Document iOS/iPad considerations
-
-## Future Considerations
-
-- iOS/iPad deployment
-- Potential VR compatibility
-- Work operation application integration
-- Additional clock features (world clock, alarms, etc.)
-
-## Development Process
-
-The development process will follow an iterative approach, with regular testing and refinement of features throughout implementation.
+```
+Clock Main Scene
+├── Main Camera
+├── Scene Context
+├── Event System
+├── Canvas
+│   ├── Background
+│   └── Viewport  # The container that holds all the UI. (vert layout)
+│       ├── Navigation Panel   # First container is the tab navbar on top (horizontal layout)
+│       └── Details Panel      # Right under it is the details panel (horizontal layout) that contains clock that moves across screens
+│           ├── Persistent Clock (Prefab)
+        └── Screens  # The last container that will have the screens under it.
+            ├── (ClockScreen/TimerScreen/StopwatchScreen) # Based on the selected tab load the appropriate screen.
+├── Controllers
+│   ├── Tab Controller # Implementation of the navbar controller where the screen mappings are setup
+```
