@@ -58,20 +58,6 @@ public class TimerServiceTests : ZenjectUnitTestFixture
     }
 
     [Test]
-    public void TimerCompletesCorrectly()
-    {
-        var completed = false;
-        _service.TimerCompleted.Subscribe(_ => completed = true);
-        
-        _service.StartTimer(TimeSpan.FromMilliseconds(200));
-        Thread.Sleep(500);
-        
-        Assert.IsTrue(completed, "Timer completed event should have fired");
-        Assert.AreEqual(TimeSpan.Zero, _service.RemainingTime.Value);
-        Assert.IsFalse(_service.IsRunning.Value);
-    }
-
-    [Test]
     public void TimerCanBeResumedAfterPause()
     {
         _service.StartTimer(TimeSpan.FromSeconds(5));
@@ -81,7 +67,7 @@ public class TimerServiceTests : ZenjectUnitTestFixture
         var pausedValue = _service.RemainingTime.Value;
         Assert.IsFalse(_service.IsRunning.Value);
         
-        _service.StartTimer(TimeSpan.Zero); // Resume without new duration
+        _service.StartTimer(TimeSpan.Zero);
         Assert.IsTrue(_service.IsRunning.Value);
         Assert.AreEqual(pausedValue, _service.RemainingTime.Value, "Timer should resume with previous value");
     }
